@@ -1,0 +1,21 @@
+{
+    "id": "fremont-troll",
+    "name": "The Fremont Troll",
+    "coordinates": {
+        "lat": 47.651047,
+        "lng": -122.347588
+    },
+    "shortDescription": "Iconic public art installation under Aurora Bridge depicting a giant troll clutching a Volkswagen Beetle",
+    "historicalPeriods": ["1990-present"],
+    "tags": ["public-art", "urban-landmarks", "community-art", "seattle"],
+    "content": {
+        "stories": [{
+            "file": "fremont-troll.md",
+            "title": "The Fremont Troll: A Guardian Under the Bridge",
+            "contributor": {
+                "name": "Charles Einarson",
+                "verified": true
+            }
+        }]
+    }
+}

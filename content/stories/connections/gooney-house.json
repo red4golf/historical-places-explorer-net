@@ -1,0 +1,85 @@
+{
+  "id": "goonies-house",
+  "type": "cultural",
+  "connections": {
+    "locations": [
+      {
+        "id": "goonies-house",
+        "relationship": "primary",
+        "coordinates": {
+          "lat": 46.19287,
+          "lng": -123.799666
+        },
+        "relevantFeatures": [
+          "victorian-architecture",
+          "film-location",
+          "historic-residence",
+          "cultural-landmark"
+        ]
+      },
+      {
+        "id": "oregon-film-museum",
+        "relationship": "related",
+        "coordinates": {
+          "lat": 46.187847,
+          "lng": -123.831501
+        },
+        "relevantFeatures": [
+          "film-history",
+          "goonies-memorabilia"
+        ]
+      }
+    ],
+    "timePeriods": [
+      {
+        "period": "1896",
+        "importance": "primary",
+        "events": [
+          {
+            "date": "1896",
+            "description": "Original construction of the Victorian home"
+          }
+        ]
+      },
+      {
+        "period": "1985",
+        "importance": "primary",
+        "events": [
+          {
+            "date": "1985",
+            "description": "Featured in The Goonies film"
+          }
+        ]
+      },
+      {
+        "period": "2017",
+        "importance": "secondary",
+        "events": [
+          {
+            "date": "2017",
+            "description": "The Goonies selected for National Film Registry preservation"
+          }
+        ]
+      },
+      {
+        "period": "2023",
+        "importance": "primary",
+        "events": [
+          {
+            "date": "January 2023",
+            "description": "Purchased by Behman Zakeri for preservation and public access"
+          }
+        ]
+      }
+    ],
+    "relatedStories": [],
+    "themes": [
+      "Film History",
+      "Historic Preservation",
+      "Cultural Landmarks",
+      "Victorian Architecture",
+      "Popular Culture",
+      "Tourism Heritage"
+    ]
+  }
+}

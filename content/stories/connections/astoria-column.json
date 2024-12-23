@@ -1,0 +1,78 @@
+{
+  "id": "astoria-column",
+  "type": "cultural",
+  "connections": {
+    "locations": [
+      {
+        "id": "astoria-column",
+        "relationship": "primary",
+        "coordinates": {
+          "lat": 46.181615,
+          "lng": -123.819574
+        },
+        "relevantFeatures": [
+          "observation-deck",
+          "sgraffito-artwork",
+          "spiral-staircase",
+          "historical-murals",
+          "restored-artwork",
+          "panoramic-views"
+        ]
+      }
+    ],
+    "timePeriods": [
+      {
+        "period": "1925-1926",
+        "importance": "primary",
+        "events": [
+          {
+            "date": "March 1926",
+            "description": "Construction begins on Astoria Column"
+          },
+          {
+            "date": "July 22, 1926",
+            "description": "Column dedication ceremony"
+          }
+        ]
+      },
+      {
+        "period": "1974",
+        "importance": "secondary",
+        "events": [
+          {
+            "date": "1974",
+            "description": "Added to National Register of Historic Places"
+          }
+        ]
+      },
+      {
+        "period": "2015",
+        "importance": "secondary",
+        "events": [
+          {
+            "date": "May-October 2015",
+            "description": "Major $1 million restoration project completed, including artwork restoration and structural improvements"
+          }
+        ]
+      }
+    ],
+    "relatedStories": [
+      {
+        "id": "oregon-film-museum",
+        "connection": "reference",
+        "description": "Another significant Astoria historical landmark"
+      }
+    ],
+    "themes": [
+      "Pacific Northwest History",
+      "Architectural History",
+      "Public Art",
+      "Regional Heritage",
+      "Historic Landmarks",
+      "Maritime History",
+      "Native American History",
+      "Lewis and Clark Expedition",
+      "Historic Preservation"
+    ]
+  }
+}

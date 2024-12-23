@@ -1,0 +1,21 @@
+{
+    "id": "astoria-column",
+    "name": "Astoria Column",
+    "coordinates": {
+        "lat": 46.181615,
+        "lng": -123.819574
+    },
+    "shortDescription": "125-foot tall tower with sgraffito artwork depicting Pacific Northwest history, offering panoramic views",
+    "historicalPeriods": ["1926-present"],
+    "tags": ["landmarks", "historic-monuments", "observation-points", "astoria"],
+    "content": {
+        "stories": [{
+            "file": "astoria-column.md",
+            "title": "Astoria Column: A Monument to Pacific Northwest History",
+            "contributor": {
+                "name": "Charles Einarson",
+                "verified": true
+            }
+        }]
+    }
+}

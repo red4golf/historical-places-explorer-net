@@ -1,0 +1,21 @@
+{
+    "id": "goonies-house",
+    "name": "The Goonies House",
+    "coordinates": {
+        "lat": 46.19287,
+        "lng": -123.799666
+    },
+    "shortDescription": "Iconic Victorian home featured in the 1985 film The Goonies, now preserved as a cultural landmark",
+    "historicalPeriods": ["1896-present", "1985"],
+    "tags": ["film-history", "historic-homes", "cultural-landmarks", "astoria"],
+    "content": {
+        "stories": [{
+            "file": "goonies-house.md",
+            "title": "The Goonies House: A Cultural Landmark",
+            "contributor": {
+                "name": "Charles Einarson",
+                "verified": true
+            }
+        }]
+    }
+}

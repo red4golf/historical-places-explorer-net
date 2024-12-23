@@ -1,0 +1,95 @@
+{
+  "id": "oregon-film-museum",
+  "type": "cultural",
+  "connections": {
+    "locations": [
+      {
+        "id": "oregon-film-museum",
+        "relationship": "primary",
+        "coordinates": {
+          "lat": 46.188557,
+          "lng": -123.83532
+        },
+        "relevantFeatures": [
+          "historic-jail",
+          "film-museum",
+          "goonies-location",
+          "historic-register"
+        ]
+      },
+      {
+        "id": "goonies-house",
+        "relationship": "related",
+        "coordinates": {
+          "lat": 46.19287,
+          "lng": -123.799666
+        },
+        "relevantFeatures": [
+          "film-location",
+          "cultural-landmark"
+        ]
+      }
+    ],
+    "timePeriods": [
+      {
+        "period": "1913-1914",
+        "importance": "primary",
+        "events": [
+          {
+            "date": "1913",
+            "description": "Construction of Clatsop County Jail"
+          },
+          {
+            "date": "1914",
+            "description": "Jail begins operations"
+          }
+        ]
+      },
+      {
+        "period": "1914-1976",
+        "importance": "secondary",
+        "events": [
+          {
+            "date": "1914-1976",
+            "description": "Building serves as active county jail"
+          }
+        ]
+      },
+      {
+        "period": "1985",
+        "importance": "primary",
+        "events": [
+          {
+            "date": "1985",
+            "description": "Featured in opening scene of The Goonies"
+          }
+        ]
+      },
+      {
+        "period": "2010-present",
+        "importance": "primary",
+        "events": [
+          {
+            "date": "2010",
+            "description": "Opens as Oregon Film Museum"
+          }
+        ]
+      }
+    ],
+    "relatedStories": [
+      {
+        "id": "goonies-house",
+        "connection": "reference",
+        "description": "Another key filming location from The Goonies"
+      }
+    ],
+    "themes": [
+      "Film History",
+      "Historic Preservation",
+      "Law Enforcement History",
+      "Cultural Heritage",
+      "Oregon Film Industry",
+      "Historic Architecture"
+    ]
+  }
+}

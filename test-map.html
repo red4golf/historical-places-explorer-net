@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Historical Places Explorer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin: 0; padding: 0; height: 100vh; width: 100vw; }
+        #map { position: absolute; top: 120px; bottom: 0; width: 100%; }
+        .controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 10px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+        .status {
+            padding: 10px;
+            margin-top: 60px;
+            background: #f0f0f0;
+            font-size: 12px;
+            position: fixed;
+            width: 100%;
+            box-sizing: border-box;
+            z-index: 1;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        #coordinates {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .mapboxgl-popup {
+            max-width: 300px;
+            font-family: Arial, sans-serif;
+        }
+        .mapboxgl-popup-content {
+            padding: 15px;
+        }
+        .popup-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .popup-description {
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .popup-period {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button onclick="getLocation()">Get My Location</button>
+        <div id="coordinates">No location yet</div>
+    </div>
+    <div id="status" class="status">Loading historical places...</div>
+    <div id="map"></div>
+
+    <script>
+        // Replace with your Mapbox token
+        mapboxgl.accessToken = 'pk.eyJ1IjoiY2VpbmFyc29uIiwiYSI6ImNtNGEybmN0ajAzOWQycXE1M2VibWNiZjkifQ.7JrNDHO9geEP_L9UT4hGgg';
+
+        let map;
+        let currentMarker = null;
+        const statusDiv = document.getElementById('status');
+
+        // Function to load locations from backend
+        async function loadHistoricalLocations() {
+            try {
+                const response = await fetch('/api/locations');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch locations');
+                }
+                const data = await response.json();
+                // Return only verified locations
+                return data.verified.map(location => {
+                    // Extract the basic information needed for the map
+                    const firstTimePeriod = location.connections.timePeriods[0];
+                    const period = firstTimePeriod ? firstTimePeriod.events.map(e => e.date).join('-') : 'Unknown';
+                    
+                    return {
+                        id: location.id,
+                        name: location.name || location.id,
+                        coordinates: {
+                            lat: location.connections.locations[0].coordinates.lat,
+                            lng: location.connections.locations[0].coordinates.lng
+                        },
+                        shortDescription: location.shortDescription || 'Historical location',
+                        historicalPeriods: [period]
+                    };
+                });
+            } catch (error) {
+                statusDiv.innerHTML = 'Error loading locations: ' + error.message;
+                // Return empty array to prevent further errors
+                return [];
+            }
+        }
+
+        // Initialize map
+        try {
+            map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/outdoors-v12',
+                center: [-122.5199, 47.6262], // Centered on Bainbridge Island
+                zoom: 12
+            });
+            
+            map.addControl(new mapboxgl.NavigationControl());
+            
+            // Add historical markers once the map is loaded
+            map.on('load', async () => {
+                const locations = await loadHistoricalLocations();
+                addHistoricalMarkers(locations);
+                statusDiv.innerHTML = 'Historical places loaded successfully';
+            });
+
+        } catch (e) {
+            statusDiv.innerHTML += '<br>Error initializing map: ' + e.message;
+        }
+
+        function addHistoricalMarkers(locations) {
+            locations.forEach(location => {
+                // Create a popup
+                const popup = new mapboxgl.Popup({ offset: 25 })
+                    .setHTML(`
+                        <div class="popup-title">${location.name}</div>
+                        <div class="popup-description">${location.shortDescription}</div>
+                        <div class="popup-period">${location.historicalPeriods.join(', ')}</div>
+                    `);
+
+                // Create and add the marker with a brown color for historical sites
+                new mapboxgl.Marker({ color: '#8B4513' })
+                    .setLngLat([location.coordinates.lng, location.coordinates.lat])
+                    .setPopup(popup)
+                    .addTo(map);
+            });
+        }
+
+        function getLocation() {
+            statusDiv.innerHTML = 'Requesting location...';
+            
+            if (!navigator.geolocation) {
+                statusDiv.innerHTML = 'Geolocation not supported by your browser';
+                return;
+            }
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+
+            navigator.geolocation.getCurrentPosition(
+                function success(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    
+                    statusDiv.innerHTML = `Location received! Accuracy: ${accuracy.toFixed(1)}m`;
+                    
+                    document.getElementById('coordinates').innerHTML = 
+                        `Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`;
+
+                    try {
+                        if (currentMarker) {
+                            currentMarker.remove();
+                        }
+
+                        // Create a popup for user location
+                        const popup = new mapboxgl.Popup({ offset: 25 })
+                            .setHTML('<div class="popup-title">Your Location</div>');
+
+                        currentMarker = new mapboxgl.Marker({ color: '#FF0000' })
+                            .setLngLat([lng, lat])
+                            .setPopup(popup)
+                            .addTo(map);
+
+                        map.flyTo({
+                            center: [lng, lat],
+                            zoom: 15
+                        });
+
+                        // Store location
+                        const captures = JSON.parse(localStorage.getItem('captures') || '[]');
+                        captures.push({
+                            lat,
+                            lng,
+                            accuracy,
+                            timestamp: new Date().toISOString()
+                        });
+                        localStorage.setItem('captures', JSON.stringify(captures));
+                        
+                        statusDiv.innerHTML += '<br>Location marked on map';
+                    } catch (e) {
+                        statusDiv.innerHTML += '<br>Error updating map: ' + e.message;
+                    }
+                },
+                function error(err) {
+                    let errorMessage = 'Location error: ';
+                    switch(err.code) {
+                        case err.PERMISSION_DENIED:
+                            errorMessage += 'Permission denied. Please enable location services for Safari in your iPhone settings.';
+                            break;
+                        case err.POSITION_UNAVAILABLE:
+                            errorMessage += 'Location unavailable. Please check your GPS signal.';
+                            break;
+                        case err.TIMEOUT:
+                            errorMessage += 'Request timed out. Please try again.';
+                            break;
+                        default:
+                            errorMessage += err.message;
+                    }
+                    statusDiv.innerHTML = errorMessage;
+                },
+                options
+            );
+        }
+    </script>
+</body>
+</html>

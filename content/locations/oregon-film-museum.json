@@ -1,0 +1,21 @@
+{
+    "id": "oregon-film-museum",
+    "name": "Oregon Film Museum",
+    "coordinates": {
+        "lat": 46.188557,
+        "lng": -123.83532
+    },
+    "shortDescription": "Former Clatsop County Jail now celebrating Oregon's film legacy, featuring The Goonies and other films",
+    "historicalPeriods": ["1913-1976", "1985-present"],
+    "tags": ["film-history", "museums", "historic-buildings", "astoria"],
+    "content": {
+        "stories": [{
+            "file": "oregon-film-museum.md",
+            "title": "Oregon Film Museum: Where History Meets Hollywood",
+            "contributor": {
+                "name": "Charles Einarson",
+                "verified": true
+            }
+        }]
+    }
+}

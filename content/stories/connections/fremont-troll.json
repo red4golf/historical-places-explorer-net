@@ -1,0 +1,70 @@
+{
+  "id": "fremont-troll",
+  "type": "cultural",
+  "connections": {
+    "locations": [
+      {
+        "id": "fremont-troll",
+        "relationship": "primary",
+        "coordinates": {
+          "lat": 47.651047,
+          "lng": -122.347588
+        },
+        "relevantFeatures": [
+          "mixed-media-sculpture",
+          "volkswagen-beetle",
+          "steel-rebar-construction",
+          "concrete-construction",
+          "bridge-support",
+          "public-art",
+          "community-landmark",
+          "18-foot-height",
+          "protected-copyright"
+        ]
+      }
+    ],
+    "timePeriods": [
+      {
+        "period": "1989-1990",
+        "importance": "primary",
+        "events": [
+          {
+            "date": "1989",
+            "description": "Fremont Arts Council commissions public art competition"
+          },
+          {
+            "date": "October 1990",
+            "description": "Construction with community participation"
+          },
+          {
+            "date": "October 31, 1990",
+            "description": "Official unveiling on Halloween"
+          }
+        ]
+      },
+      {
+        "period": "2005",
+        "importance": "secondary",
+        "events": [
+          {
+            "date": "2005",
+            "description": "Street renamed to 'Troll Avenue' in honor of the sculpture"
+          }
+        ]
+      }
+    ],
+    "relatedStories": [],
+    "themes": [
+      "Public Art",
+      "Community Engagement",
+      "Urban Folklore",
+      "Creative Expression",
+      "Neighborhood Identity",
+      "Cultural Landmarks",
+      "Arts Movement",
+      "Urban Development",
+      "Copyright Protection",
+      "Mixed Media Art"
+    ]
+  }
+}
