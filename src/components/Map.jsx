@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import LocationDetailModal from './LocationDetailModal';
+import { calculateBounds, fitMapToBounds, zoomToLocation } from '../utils/mapUtils';
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiY2VpbmFyc29uIiwiYSI6ImNtNGEybmN0ajAzOWQycXE1M2VibWNiZjkifQ.7JrNDHO9geEP_L9UT4hGgg';
 
@@ -33,6 +34,7 @@ const Map = ({ locations, currentLocation }) => {
     return 'Unnamed Location';
   };
 
+  // Initialize map
   useEffect(() => {
     if (map.current) return;
 
@@ -41,11 +43,20 @@ const Map = ({ locations, currentLocation }) => {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/outdoors-v12',
-        center: [-122.5199, 47.6262], // Bainbridge Island
-        zoom: 12
+        center: [-98.5795, 39.8283], // Center of US
+        zoom: 3
       });
 
       map.current.addControl(new mapboxgl.NavigationControl());
+      
+      // Initial bounds fitting if locations exist
+      if (locations?.length) {
+        const bounds = calculateBounds(locations);
+        map.current.on('load', () => {
+          fitMapToBounds(map.current, bounds);
+        });
+      }
+      
       console.log('Map initialized successfully');
     } catch (error) {
       console.error('Error initializing map:', error);
@@ -89,6 +100,10 @@ const Map = ({ locations, currentLocation }) => {
       markers.current.push(marker);
     });
 
+    // Fit map to all locations
+    const bounds = calculateBounds(locations, currentLocation);
+    fitMapToBounds(map.current, bounds);
+
     // Add global handler for the "View Details" button
     window.showLocationDetails = (locationId) => {
       const location = locations.find(loc => loc.id === locationId);
@@ -98,25 +113,31 @@ const Map = ({ locations, currentLocation }) => {
     };
   }, [locations]);
 
-  // Update current location marker
+  // Update current location marker and zoom
   useEffect(() => {
     if (!map.current || !currentLocation) return;
 
     console.log('Setting current location:', currentLocation);
 
     try {
-      // Add marker for current location
+      // Remove existing current location marker
+      const currentMarker = markers.current.find(m => m._isCurrentLocation);
+      if (currentMarker) {
+        currentMarker.remove();
+        markers.current = markers.current.filter(m => !m._isCurrentLocation);
+      }
+
+      // Add new marker for current location
       const marker = new mapboxgl.Marker({ color: '#FF0000' })
         .setLngLat([currentLocation.lng, currentLocation.lat])
         .addTo(map.current);
-
+      
+      // Tag this marker as current location
+      marker._isCurrentLocation = true;
       markers.current.push(marker);
 
-      // Center map on new location
-      map.current.flyTo({
-        center: [currentLocation.lng, currentLocation.lat],
-        zoom: 15
-      });
+      // Zoom to current location
+      zoomToLocation(map.current, currentLocation);
     } catch (error) {
       console.error('Error updating current location:', error);
     }

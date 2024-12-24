@@ -1,0 +1,11 @@
+{
+  "name": "Port Blakely Mill Site",
+  "coordinates": {
+    "lat": 47.5963,
+    "lng": -122.5148
+  },
+  "shortDescription": "Former site of one of the world's largest sawmills, operating from 1864 to 1922.",
+  "historicalPeriods": ["1800s", "1900s"],
+  "tags": ["industry", "maritime", "lumber"],
+  "photos": []
+}

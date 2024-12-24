@@ -95,7 +95,9 @@ export async function getLocations() {
                     name: loc.name,
                     coordinates: loc.coordinates,
                     shortDescription: loc.shortDescription,
-                    historicalPeriods: loc.historicalPeriods
+                    historicalPeriods: loc.historicalPeriods,
+                    content: loc.content,  // Include content property
+                    tags: loc.tags
                 })),
             drafts: allLocations.filter(loc => loc.isDraft)
         };
@@ -106,6 +108,21 @@ export async function getLocations() {
         console.error('LocationService: Error in getLocations:', error);
         throw error;
     }
+}
+
+import os from 'os';
+import { networkInterfaces } from 'os';
+
+function getLocalIP() {
+  const interfaces = networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const networkInterface of interfaces[name]) {
+      if (networkInterface.family === 'IPv4' && !networkInterface.internal) {
+        return networkInterface.address;
+      }
+    }
+  }
+  return '127.0.0.1'; // Fallback to localhost if no external IP found
 }
 
 export async function deleteLocation(id) {

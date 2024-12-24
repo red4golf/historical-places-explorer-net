@@ -1,0 +1,11 @@
+{
+  "name": "Forks Timber Museum",
+  "coordinates": {
+    "lat": 47.9504,
+    "lng": -124.3858
+  },
+  "shortDescription": "Museum showcasing the logging heritage of the Olympic Peninsula, featuring artifacts, photos, and equipment from the region's early logging era.",
+  "historicalPeriods": ["1900s"],
+  "tags": ["industry", "lumber", "heritage", "museum"],
+  "photos": []
+}
