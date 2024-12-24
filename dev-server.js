@@ -2,6 +2,33 @@ import express from 'express';
 import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import { getLocations, deleteLocation } from './src/utils/locationService.js';
+import { getStory } from './src/utils/storyService.js';
+import { networkInterfaces } from 'os';
+
+// Add function to get local IP address
+function getLocalIP() {
+    const nets = networkInterfaces();
+    let addresses = [];
+    
+    // Collect all IPv4 addresses
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            if (net.family === 'IPv4' && !net.internal) {
+                addresses.push({
+                    name: name,
+                    address: net.address
+                });
+            }
+        }
+    }
+    
+    // Prioritize physical network adapters (typically 192.168.x.x)
+    const physicalAdapter = addresses.find(addr => 
+        addr.address.startsWith('192.168')
+    );
+    
+    return physicalAdapter ? physicalAdapter.address : addresses[0]?.address || '127.0.0.1';
+}
 
 const app = express();
 
@@ -32,6 +59,20 @@ app.get('/api/locations', async (req, res) => {
     } catch (error) {
         console.error('API Error loading locations:', error);
         res.status(500).json({ error: 'Failed to load locations' });
+    }
+});
+
+// Story endpoint
+app.get('/api/stories/:filename', async (req, res) => {
+    console.log('API: Received request for story:', req.params.filename);
+    try {
+        const content = await getStory(req.params.filename);
+        res.setHeader('Content-Type', 'text/markdown');
+        res.send(content);
+        console.log('API: Story sent successfully');
+    } catch (error) {
+        console.error('API Error loading story:', error);
+        res.status(500).json({ error: 'Failed to load story' });
     }
 });
 
@@ -68,12 +109,19 @@ try {
 // Use Vite's connect instance as middleware
 app.use(vite.middlewares);
 
+// The server is set up to be accessible from mobile devices on the same network using the local IP address.
 const PORT = process.env.PORT || 5173;
-app.listen(PORT, () => {
+const HOST = '0.0.0.0'; // Listen on all network interfaces
+
+app.listen(PORT, HOST, () => {
+    const localIP = getLocalIP();
     console.log('='.repeat(50));
-    console.log(`Dev server running at http://localhost:${PORT}`);
-    console.log('API endpoints:');
+    console.log(`Dev server running on:`);
+    console.log(`- Local: http://localhost:${PORT}`);
+    console.log(`- Network: http://${localIP}:${PORT}`);
+    console.log('\nAPI endpoints:');
     console.log(`- GET  http://localhost:${PORT}/api/locations`);
+    console.log(`- GET  http://localhost:${PORT}/api/stories/:filename`);
     console.log(`- DELETE http://localhost:${PORT}/api/locations/:id`);
     console.log('='.repeat(50));
 });
