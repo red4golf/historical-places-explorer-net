@@ -7,7 +7,19 @@
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
     <style>
         body { margin: 0; padding: 0; height: 100vh; width: 100vw; }
-        #map { position: absolute; top: 120px; bottom: 0; width: 100%; }
+        #map { position: absolute; top: 120px; bottom: 0; width: 70%; }
+        #story-panel {
+            position: absolute;
+            right: 0;
+            top: 120px;
+            bottom: 0;
+            width: 30%;
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
+            display: none;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+        }
         .controls {
             position: fixed;
             top: 0;
@@ -28,209 +40,234 @@
             box-sizing: border-box;
             z-index: 1;
         }
-        button {
-            width: 100%;
-            padding: 15px;
+        .popup { max-width: 300px; }
+        .view-details {
             background: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            margin: 5px 0;
+            padding: 8px 16px;
+            cursor: pointer;
+            margin-top: 10px;
         }
-        #coordinates {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        .mapboxgl-popup {
-            max-width: 300px;
-            font-family: Arial, sans-serif;
-        }
-        .mapboxgl-popup-content {
-            padding: 15px;
-        }
-        .popup-title {
-            font-weight: bold;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-        .popup-description {
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        .popup-period {
-            font-size: 12px;
-            color: #666;
-            font-style: italic;
+        @media (max-width: 768px) {
+            #map { width: 100%; }
+            #story-panel {
+                width: 100%;
+                top: 50%;
+                z-index: 2;
+            }
         }
     </style>
 </head>
 <body>
     <div class="controls">
-        <button onclick="getLocation()">Get My Location</button>
-        <div id="coordinates">No location yet</div>
+        <button onclick="locateUser()">Find My Location</button>
+        <button onclick="clearMarkers()">Clear Markers</button>
+        <button onclick="toggleStoryPanel()">Toggle Story Panel</button>
     </div>
-    <div id="status" class="status">Loading historical places...</div>
+    <div class="status" id="status">Ready</div>
     <div id="map"></div>
+    <div id="story-panel"></div>
 
     <script>
-        // Replace with your Mapbox token
-        mapboxgl.accessToken = 'pk.eyJ1IjoiY2VpbmFyc29uIiwiYSI6ImNtNGEybmN0ajAzOWQycXE1M2VibWNiZjkifQ.7JrNDHO9geEP_L9UT4hGgg';
-
-        let map;
-        let currentMarker = null;
-        const statusDiv = document.getElementById('status');
-
-        // Function to load locations from backend
-        async function loadHistoricalLocations() {
-            try {
-                const response = await fetch('/api/locations');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch locations');
+        const locations = [
+            {
+                id: "pike-place-market",
+                name: "Pike Place Market",
+                coordinates: [-122.3422, 47.6097],
+                description: "Seattle's historic public market since 1907",
+                story: {
+                    title: "Pike Place Market: Seattle's Living History",
+                    content: `Established in 1907, Pike Place Market emerged as a revolutionary solution to rising food costs. The market's creation allowed farmers to sell directly to consumers, eliminating price-gouging middlemen. Today, it represents the nation's oldest continuously operating public farmers' market.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
                 }
-                const data = await response.json();
-                // Return only verified locations
-                return data.verified.map(location => {
-                    // Extract the basic information needed for the map
-                    const firstTimePeriod = location.connections.timePeriods[0];
-                    const period = firstTimePeriod ? firstTimePeriod.events.map(e => e.date).join('-') : 'Unknown';
-                    
-                    return {
-                        id: location.id,
-                        name: location.name || location.id,
-                        coordinates: {
-                            lat: location.connections.locations[0].coordinates.lat,
-                            lng: location.connections.locations[0].coordinates.lng
-                        },
-                        shortDescription: location.shortDescription || 'Historical location',
-                        historicalPeriods: [period]
-                    };
+            },
+            {
+                id: "fort-nisqually",
+                name: "Fort Nisqually",
+                coordinates: [-122.5138, 47.2854],
+                description: "Historic Hudson's Bay Company trading post",
+                story: {
+                    title: "Fort Nisqually: Gateway to Puget Sound Trade",
+                    content: `Established in 1833, Fort Nisqually served as the first European settlement on Puget Sound and was a crucial trading post for the Hudson's Bay Company. The fort facilitated trade between Native Americans and European settlers, becoming a vital economic hub for the region.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
+                }
+            },
+            {
+                id: "port-gamble",
+                name: "Port Gamble Historic District",
+                coordinates: [-122.5849, 47.8521],
+                description: "Historic lumber mill town since 1853",
+                story: {
+                    title: "Port Gamble: The Town That Timber Built",
+                    content: `Founded in 1853, Port Gamble represents one of the oldest surviving company towns in the American West. The Pope and Talbot company modeled the town after their hometown of East Machias, Maine, creating a New England-style village on Puget Sound that operated continuously as a company mill town until 1995.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
+                }
+            },
+            {
+                id: "rothschild-house",
+                name: "Rothschild House",
+                coordinates: [-122.7597, 48.1171],
+                description: "Victorian mansion from 1868",
+                story: {
+                    title: "Rothschild House: A Victorian Time Capsule",
+                    content: `Built in 1868 by D.C.H. Rothschild, this house stands as one of the finest examples of Victorian architecture in Washington State. The house remains exactly as it was when the family lived there, showcasing original furnishings and providing a glimpse into 19th-century merchant life in Port Townsend.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
+                }
+            },
+            {
+                id: "fort-worden",
+                name: "Fort Worden",
+                coordinates: [-122.7675, 48.1369],
+                description: "Coastal artillery fort from 1902",
+                story: {
+                    title: "Fort Worden: Guardian of Puget Sound",
+                    content: `Constructed between 1898 and 1920, Fort Worden was part of the "Triangle of Fire" that protected Puget Sound. The fort's massive guns and extensive tunnel systems represented the peak of American coastal defense. Today, it serves as a state park and cultural center, hosting arts programs and educational initiatives.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
+                }
+            },
+            {
+                id: "snoqualmie-falls",
+                name: "Snoqualmie Falls",
+                coordinates: [-121.8377, 47.5419],
+                description: "Sacred Snoqualmie People site and hydroelectric pioneer",
+                story: {
+                    title: "Snoqualmie Falls: Power and Spirit",
+                    content: `At 268 feet high, Snoqualmie Falls is not only a spectacular natural wonder but a sacred site to the Snoqualmie People. In 1899, it became home to the world's first underground hydroelectric plant, representing a remarkable fusion of natural power and human innovation.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
+                }
+            },
+            {
+                id: "deception-pass",
+                name: "Deception Pass Bridge",
+                coordinates: [-122.6429, 48.4065],
+                description: "Historic bridge connecting Whidbey and Fidalgo Islands",
+                story: {
+                    title: "Deception Pass: Spanning the Narrows",
+                    content: `Completed in 1935, this engineering marvel spans one of the most treacherous water passages in Puget Sound. The bridge, consisting of two spans, transformed island life by replacing an unreliable ferry system and stands as a testament to Depression-era public works.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
+                }
+            },
+            {
+                id: "chittenden-locks",
+                name: "Hiram M. Chittenden Locks",
+                coordinates: [-122.3977, 47.6655],
+                description: "Historic shipping canal and fish ladder",
+                story: {
+                    title: "The Locks: Gateway to Seattle's Waterways",
+                    content: `Operating since 1917, these locks connect Puget Sound with Lake Washington and Lake Union. This engineering achievement maintains Seattle's freshwater lake system while allowing marine traffic and salmon migration through an innovative fish ladder.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
+                }
+            },
+            {
+                id: "pioneer-square",
+                name: "Pioneer Square",
+                coordinates: [-122.3343, 47.6015],
+                description: "Seattle's original downtown",
+                story: {
+                    title: "Pioneer Square: Seattle's First Neighborhood",
+                    content: `The heart of Seattle's history, Pioneer Square rose from the ashes of the Great Seattle Fire of 1889. The district's distinctive Richardsonian Romanesque architecture showcases the city's rebirth and early economic boom during the Klondike Gold Rush.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
+                }
+            },
+            {
+                id: "port-angeles-underground",
+                name: "Port Angeles Underground",
+                coordinates: [-123.4307, 48.1181],
+                description: "Hidden network of underground passages",
+                story: {
+                    title: "Port Angeles Underground: The Buried City",
+                    content: `In the early 1900s, Port Angeles underwent a massive elevation project, raising the street level and creating an underground network of passages. This engineering feat, similar to Seattle's underground, was part of ambitious plans to create a major port city.`,
+                    author: "Charles Einarson",
+                    date: "2024-12-23"
+                }
+            }
+        ];
+
+        mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN';
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [-122.3321, 47.6062],
+            zoom: 9
+        });
+
+        let markers = [];
+
+        map.on('load', () => {
+            locations.forEach(addMarker);
+        });
+
+        function addMarker(location) {
+            const popup = new mapboxgl.Popup({ offset: 25 })
+                .setHTML(`
+                    <div class="popup">
+                        <h3>${location.name}</h3>
+                        <p>${location.description}</p>
+                        <button class="view-details" onclick="showStory('${location.id}')">
+                            View Details
+                        </button>
+                    </div>
+                `);
+
+            const marker = new mapboxgl.Marker()
+                .setLngLat(location.coordinates)
+                .setPopup(popup)
+                .addTo(map);
+
+            markers.push(marker);
+        }
+
+        function showStory(locationId) {
+            const location = locations.find(l => l.id === locationId);
+            const storyPanel = document.getElementById("story-panel");
+            storyPanel.style.display = "block";
+            storyPanel.innerHTML = `
+                <h2>${location.story.title}</h2>
+                <p><strong>By ${location.story.author}</strong></p>
+                <p><em>${location.story.date}</em></p>
+                <div class="story-content">
+                    ${location.story.content}
+                </div>
+                <button onclick="closeStory()" style="margin-top: 20px;">Close</button>
+            `;
+        }
+
+        function closeStory() {
+            document.getElementById("story-panel").style.display = "none";
+        }
+
+        function locateUser() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const { longitude, latitude } = position.coords;
+                    map.flyTo({
+                        center: [longitude, latitude],
+                        zoom: 14
+                    });
+                    document.getElementById('status').textContent = 
+                        `Located at: ${latitude}, ${longitude}`;
                 });
-            } catch (error) {
-                statusDiv.innerHTML = 'Error loading locations: ' + error.message;
-                // Return empty array to prevent further errors
-                return [];
             }
         }
 
-        // Initialize map
-        try {
-            map = new mapboxgl.Map({
-                container: 'map',
-                style: 'mapbox://styles/mapbox/outdoors-v12',
-                center: [-122.5199, 47.6262], // Centered on Bainbridge Island
-                zoom: 12
-            });
-            
-            map.addControl(new mapboxgl.NavigationControl());
-            
-            // Add historical markers once the map is loaded
-            map.on('load', async () => {
-                const locations = await loadHistoricalLocations();
-                addHistoricalMarkers(locations);
-                statusDiv.innerHTML = 'Historical places loaded successfully';
-            });
-
-        } catch (e) {
-            statusDiv.innerHTML += '<br>Error initializing map: ' + e.message;
+        function clearMarkers() {
+            markers.forEach(marker => marker.remove());
+            markers = [];
         }
 
-        function addHistoricalMarkers(locations) {
-            locations.forEach(location => {
-                // Create a popup
-                const popup = new mapboxgl.Popup({ offset: 25 })
-                    .setHTML(`
-                        <div class="popup-title">${location.name}</div>
-                        <div class="popup-description">${location.shortDescription}</div>
-                        <div class="popup-period">${location.historicalPeriods.join(', ')}</div>
-                    `);
-
-                // Create and add the marker with a brown color for historical sites
-                new mapboxgl.Marker({ color: '#8B4513' })
-                    .setLngLat([location.coordinates.lng, location.coordinates.lat])
-                    .setPopup(popup)
-                    .addTo(map);
-            });
-        }
-
-        function getLocation() {
-            statusDiv.innerHTML = 'Requesting location...';
-            
-            if (!navigator.geolocation) {
-                statusDiv.innerHTML = 'Geolocation not supported by your browser';
-                return;
-            }
-
-            const options = {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            };
-
-            navigator.geolocation.getCurrentPosition(
-                function success(position) {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    const accuracy = position.coords.accuracy;
-                    
-                    statusDiv.innerHTML = `Location received! Accuracy: ${accuracy.toFixed(1)}m`;
-                    
-                    document.getElementById('coordinates').innerHTML = 
-                        `Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`;
-
-                    try {
-                        if (currentMarker) {
-                            currentMarker.remove();
-                        }
-
-                        // Create a popup for user location
-                        const popup = new mapboxgl.Popup({ offset: 25 })
-                            .setHTML('<div class="popup-title">Your Location</div>');
-
-                        currentMarker = new mapboxgl.Marker({ color: '#FF0000' })
-                            .setLngLat([lng, lat])
-                            .setPopup(popup)
-                            .addTo(map);
-
-                        map.flyTo({
-                            center: [lng, lat],
-                            zoom: 15
-                        });
-
-                        // Store location
-                        const captures = JSON.parse(localStorage.getItem('captures') || '[]');
-                        captures.push({
-                            lat,
-                            lng,
-                            accuracy,
-                            timestamp: new Date().toISOString()
-                        });
-                        localStorage.setItem('captures', JSON.stringify(captures));
-                        
-                        statusDiv.innerHTML += '<br>Location marked on map';
-                    } catch (e) {
-                        statusDiv.innerHTML += '<br>Error updating map: ' + e.message;
-                    }
-                },
-                function error(err) {
-                    let errorMessage = 'Location error: ';
-                    switch(err.code) {
-                        case err.PERMISSION_DENIED:
-                            errorMessage += 'Permission denied. Please enable location services for Safari in your iPhone settings.';
-                            break;
-                        case err.POSITION_UNAVAILABLE:
-                            errorMessage += 'Location unavailable. Please check your GPS signal.';
-                            break;
-                        case err.TIMEOUT:
-                            errorMessage += 'Request timed out. Please try again.';
-                            break;
-                        default:
-                            errorMessage += err.message;
-                    }
-                    statusDiv.innerHTML = errorMessage;
-                },
-                options
-            );
+        function toggleStoryPanel() {
+            const panel = document.getElementById("story-panel");
+            panel.style.display = panel.style.display === "none" ? "block" : "none";
         }
     </script>
 </body>
