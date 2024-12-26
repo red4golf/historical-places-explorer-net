@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Places Explorer</title>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .popup-content { max-width: 300px; }
+        .popup-title { font-weight: bold; margin-bottom: 8px; }
+        .popup-description { font-size: 14px; margin-bottom: 8px; }
+        .popup-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+        .tag { background: #e5e7eb; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+        .control-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            z-index: 1;
+            max-width: 300px;
+        }
+        .control-panel h3 { margin: 0 0 8px 0; }
+        .control-panel p { margin: 0; font-size: 14px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="control-panel">
+        <h3>Historical Places Explorer</h3>
+        <p>Discover historical sites across the Pacific Northwest</p>
+        <p>Zoom out to see clusters of locations</p>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiY2VpbmFyc29uIiwiYSI6ImNtNGEybmN0ajAzOWQycXE1M2VibWNiZjkifQ.7JrNDHO9geEP_L9UT4hGgg';
+
+        // Historical locations data
+        const locations = [
+            {
+                id: "astoria-column",
+                name: "Astoria Column",
+                coordinates: { lat: 46.181615, lng: -123.819574 },
+                description: "125-foot tall tower with sgraffito artwork depicting Pacific Northwest history, offering panoramic views",
+                tags: ["landmarks", "historic-monuments", "observation-points", "astoria"]
+            },
+            {
+                id: "bonneville-dam",
+                name: "Bonneville Dam",
+                coordinates: { lat: 45.6442, lng: -121.9403 },
+                description: "First federal hydroelectric project on the Columbia River, combining power generation with fish conservation",
+                tags: ["infrastructure", "new-deal", "engineering"]
+            },
+            {
+                id: "crown-point",
+                name: "Crown Point Vista House",
+                coordinates: { lat: 45.5397, lng: -122.2428 },
+                description: "Historic observatory and rest stop on the Historic Columbia River Highway, offering panoramic views",
+                tags: ["architecture", "scenic-highway", "tourism"]
+            },
+            {
+                id: "deception-pass",
+                name: "Deception Pass Bridge",
+                coordinates: { lat: 48.4065, lng: -122.6429 },
+                description: "Historic bridge connecting Whidbey and Fidalgo Islands, built by the Civilian Conservation Corps in 1935",
+                tags: ["infrastructure", "CCC", "maritime"]
+            },
+            {
+                id: "ebeys-landing",
+                name: "Ebey's Landing",
+                coordinates: { lat: 48.1970, lng: -122.6980 },
+                description: "Historic reserve showcasing Pacific Northwest pioneer life and farming heritage",
+                tags: ["farming", "pioneer", "preservation"]
+            },
+            {
+                id: "fort-casey",
+                name: "Fort Casey",
+                coordinates: { lat: 48.1637, lng: -122.6776 },
+                description: "Coastal defense fort with historic lighthouse and artillery installations",
+                tags: ["military", "maritime", "defense"]
+            },
+            {
+                id: "fort-vancouver",
+                name: "Fort Vancouver",
+                coordinates: { lat: 45.6252, lng: -122.6617 },
+                description: "Reconstructed 19th-century fur trading post with living history demonstrations",
+                tags: ["fur-trade", "military", "colonial"]
+            },
+            {
+                id: "fremont-troll",
+                name: "Fremont Troll",
+                coordinates: { lat: 47.6507, lng: -122.3473 },
+                description: "Iconic public art installation under Aurora Bridge depicting a giant troll",
+                tags: ["art", "culture", "urban"]
+            },
+            {
+                id: "goonies-house",
+                name: "The Goonies House",
+                coordinates: { lat: 46.1892, lng: -123.8037 },
+                description: "Iconic Victorian home featured in the 1985 film The Goonies",
+                tags: ["film", "pop-culture", "astoria"]
+            },
+            {
+                id: "japanese-plaza",
+                name: "Japanese American Historical Plaza",
+                coordinates: { lat: 45.5247, lng: -122.6702 },
+                description: "Memorial plaza honoring the history of Japanese Americans in the Pacific Northwest",
+                tags: ["memorial", "wwii", "cultural"]
+            },
+            {
+                id: "klondike-seattle",
+                name: "Klondike Gold Rush National Historical Park",
+                coordinates: { lat: 47.5987, lng: -122.3318 },
+                description: "Museum exploring Seattle's role in the Klondike Gold Rush",
+                tags: ["gold-rush", "museum", "pioneer"]
+            },
+            {
+                id: "lewis-and-clark",
+                name: "Lewis and Clark National Historical Park",
+                coordinates: { lat: 46.1342, lng: -123.8811 },
+                description: "Park commemorating the Lewis and Clark Expedition's arrival at the Pacific",
+                tags: ["exploration", "historic-site", "national-park"]
+            },
+            {
+                id: "manhattan-project",
+                name: "Manhattan Project - Hanford Site",
+                coordinates: { lat: 46.6333, lng: -119.5279 },
+                description: "Site of plutonium production for the first nuclear weapons",
+                tags: ["wwii", "science", "military"]
+            },
+            {
+                id: "mount-st-helens",
+                name: "Mount St. Helens National Volcanic Monument",
+                coordinates: { lat: 46.1914, lng: -122.1956 },
+                description: "Site of the 1980 volcanic eruption with educational exhibits",
+                tags: ["volcano", "geology", "national-monument"]
+            },
+            {
+                id: "oregon-film-museum",
+                name: "Oregon Film Museum",
+                coordinates: { lat: 46.1875, lng: -123.8314 },
+                description: "Former Clatsop County Jail now celebrating Oregon's film legacy",
+                tags: ["film", "museum", "astoria"]
+            },
+            {
+                id: "oregon-trail",
+                name: "Oregon Trail Interpretive Center",
+                coordinates: { lat: 44.8124, lng: -117.7198 },
+                description: "Living history demonstrations of the Oregon Trail experience",
+                tags: ["pioneer", "migration", "education"]
+            },
+            {
+                id: "pike-place",
+                name: "Pike Place Market",
+                coordinates: { lat: 47.6097, lng: -122.3422 },
+                description: "Historic public market established in 1907",
+                tags: ["market", "culture", "urban"]
+            },
+            {
+                id: "port-blakely",
+                name: "Port Blakely Mill Site",
+                coordinates: { lat: 47.5963, lng: -122.5107 },
+                description: "Site of the historic Port Blakely Mill, once the world's largest sawmill",
+                tags: ["industry", "maritime", "lumber"]
+            },
+            {
+                id: "port-gamble",
+                name: "Port Gamble Historic District",
+                coordinates: { lat: 47.8521, lng: -122.5848 },
+                description: "National Historic Landmark District and company town",
+                tags: ["lumber", "industry", "company-town"]
+            },
+            {
+                id: "port-townsend",
+                name: "Port Townsend Historic District",
+                coordinates: { lat: 48.1171, lng: -122.7604 },
+                description: "Victorian seaport and former 'City of Dreams'",
+                tags: ["maritime", "victorian", "architecture"]
+            },
+            {
+                id: "san-juan-islands",
+                name: "San Juan Island National Historical Park",
+                coordinates: { lat: 48.4620, lng: -123.0041 },
+                description: "Park commemorating the peaceful resolution of the Pig War border dispute",
+                tags: ["park", "military", "maritime"]
+            },
+            {
+                id: "whitman-mission",
+                name: "Whitman Mission",
+                coordinates: { lat: 46.0422, lng: -118.4661 },
+                description: "Site of the 1847 Whitman massacre and early American settlement",
+                tags: ["pioneer", "mission", "native-american"]
+            },
+            {
+                id: "yakima-wine",
+                name: "Yakima Valley Wine Country",
+                coordinates: { lat: 46.3272, lng: -120.0741 },
+                description: "Washington's first wine region, established by Italian immigrants",
+                tags: ["agriculture", "wine", "immigrant"]
+            },
+            {
+                id: "yama-village",
+                name: "Yama Village Site",
+                coordinates: { lat: 47.5920, lng: -122.5170 },
+                description: "Site of historic Japanese village that housed workers for Port Blakely Mill",
+                tags: ["japanese-american", "industry", "cultural"]
+            }
+        ];
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/outdoors-v12',
+            center: [-121.5, 46.5], // Centered to show all locations
+            zoom: 6
+        });
+
+        // Add zoom and rotation controls
+        map.addControl(new mapboxgl.NavigationControl());
+
+        // Add geolocate control
+        map.addControl(new mapboxgl.GeolocateControl({
+            positionOptions: {
+                enableHighAccuracy: true
+            },
+            trackUserLocation: true
+        }));
+
+        map.on('load', () => {
+            // Add source for clustered locations
+            map.addSource('locations', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: locations.map(loc => ({
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [loc.coordinates.lng, loc.coordinates.lat]
+                        },
+                        properties: {
+                            id: loc.id,
+                            title: loc.name,
+                            description: loc.description,
+                            tags: loc.tags
+                        }
+                    }))
+                },
+                cluster: true,
+                clusterMaxZoom: 14,
+                clusterRadius: 50
+            });
+
+            // Add clusters layer
+            map.addLayer({
+                id: 'clusters',
+                type: 'circle',
+                source: 'locations',
+                filter: ['has', 'point_count'],
+                paint: {
+                    'circle-color': [
+                        'step',
+                        ['get', 'point_count'],
+                        '#51bbd6',
+                        3,
+                        '#f1f075',
+                        7,
+                        '#f28cb1'
+                    ],
+                    'circle-radius': [
+                        'step',
+                        ['get', 'point_count'],
+                        20,
+                        3,
+                        30,
+                        7,
+                        40
+                    ]
+                }
+            });
+
+            // Add cluster count labels
+            map.addLayer({
+                id: 'cluster-count',
+                type: 'symbol',
+                source: 'locations',
+                filter: ['has', 'point_count'],
+                layout: {
+                    'text-field': '{point_count_abbreviated}',
+                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                    'text-size': 12
+                }
+            });
+
+            // Add unclustered point layer
+            map.addLayer({
+                id: 'unclustered-point',
+                type: 'circle',
+                source: 'locations',
+                filter: ['!', ['has', 'point_count']],
+                paint: {
+                    'circle-color': '#2D60A3',
+                    'circle-radius': 8,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#fff'
+                }
+            });
+
+            // Add markers with popups for each location
+            locations.forEach(location => {
+                const popupContent = document.createElement('div');
+                popupContent.className = 'popup-content';
+                popupContent.innerHTML = `
+                    <div class="popup-title">${location.name}</div>
+                    <div class="popup-description">${location.description}</div>
+                    <div class="popup-tags">
+                        ${location.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    </div>
+                `;
+
+                const popup = new mapboxgl.Popup({ offset: 25 })
+                    .setDOMContent(popupContent);
+
+                new mapboxgl.Marker()
+                    .setLngLat([location.coordinates.lng, location.coordinates.lat])
+                    .setPopup(popup)
+                    .addTo(map);
+            });
+
+            // Handle cluster clicks
+            map.on('click', 'clusters', (e) => {
+                const features = map.queryRenderedFeatures(e.point, {
+                    layers: ['clusters']
+                });
+                const clusterId = features[0].properties.cluster_id;
+                map.getSource('locations').getClusterExpansion(
+                    clusterId,
+                    (err, zoom) => {
+                        if (err) return;
+                        map.easeTo({
+                            center: features[0].geometry.coordinates,
+                            zoom: zoom
+                        });
+                    }
+                );
+            });
+
+            // Change cursor on hover
+            map.on('mouseenter', 'clusters', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            map.on('mouseleave', 'clusters', () => {
+                map.getCanvas().style.cursor = '';
+            });
+        });
+    </script>
+</body>
+</html>
