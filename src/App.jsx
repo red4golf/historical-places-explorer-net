@@ -12,15 +12,13 @@ function App() {
       .then(res => res.json())
       .then(data => {
         console.log('Loaded locations:', data);
-        // Extract verified locations from the API response
         setLocations(data.verified || []);
       })
       .catch(err => console.error('Failed to load locations:', err));
   }, []);
 
   const handleNewLocation = (location) => {
-    console.log('New location added:', location);
-    setLocations([...locations, location]);
+    setLocations(prevLocations => [...prevLocations, location]);
   };
 
   const getCurrentLocation = () => {
@@ -35,7 +33,6 @@ function App() {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
-        console.log('Got current location:', newLocation);
         setCurrentLocation(newLocation);
       },
       (error) => {
@@ -52,37 +49,46 @@ function App() {
 
   return (
     <Providers>
-      <div className="h-screen w-screen flex flex-col">
-        <div className="p-4 flex justify-between items-center bg-white shadow-sm z-10">
-          <h1 className="text-xl font-bold">Historical Places Explorer</h1>
-          <button
-            onClick={getCurrentLocation}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          >
-            Get Location
-          </button>
-        </div>
+      <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <header className="p-4 bg-white shadow-sm z-10">
+          <div className="flex justify-between items-center">
+            <h1 className="text-xl font-bold">Historical Places Explorer</h1>
+            <button
+              onClick={getCurrentLocation}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            >
+              Get Location
+            </button>
+          </div>
+        </header>
 
-        <div className="flex-1 relative w-full h-full">
-          <Map 
-            locations={locations} 
-            currentLocation={currentLocation} 
-          />
+        {/* Main content */}
+        <main style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#f0f0f0' }}>
+            <Map 
+              locations={locations} 
+              currentLocation={currentLocation} 
+            />
+          </div>
+
+          {/* Add Location Button */}
           <div className="absolute bottom-4 right-4 z-10">
             <AddLocationButton 
               onLocationAdded={handleNewLocation}
               setCurrentLocation={setCurrentLocation}
             />
           </div>
-        </div>
+        </main>
 
+        {/* Footer with location info */}
         {currentLocation && (
-          <div className="p-4 bg-white border-t z-10">
+          <footer className="p-4 bg-white border-t">
             <p className="font-bold">Latest Location:</p>
             <p>Lat: {currentLocation.lat.toFixed(6)}</p>
             <p>Lng: {currentLocation.lng.toFixed(6)}</p>
             <p>Time: {new Date().toLocaleString()}</p>
-          </div>
+          </footer>
         )}
       </div>
     </Providers>

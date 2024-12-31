@@ -2,157 +2,246 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import LocationDetailModal from './LocationDetailModal';
-import { calculateBounds, fitMapToBounds, zoomToLocation } from '../utils/mapUtils';
+import { calculateBounds, fitMapToBounds, zoomToLocation, getCoordinates } from '../utils/mapUtils';
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiY2VpbmFyc29uIiwiYSI6ImNtNGEybmN0ajAzOWQycXE1M2VibWNiZjkifQ.7JrNDHO9geEP_L9UT4hGgg';
 
-const Map = ({ locations, currentLocation }) => {
+const Map = ({ locations = [], currentLocation }) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
-  const markers = useRef([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
-
-  // Helper function to get coordinates from a location object
-  const getCoordinates = (location) => {
-    if (location.coordinates) {
-      return location.coordinates;
-    }
-    if (location.location && location.location.coordinates) {
-      return location.location.coordinates;
-    }
-    return null;
-  };
-
-  // Helper function to get name from a location object
-  const getName = (location) => {
-    if (typeof location.name === 'string') {
-      return location.name;
-    }
-    if (location.name && location.name.current) {
-      return location.name.current;
-    }
-    return 'Unnamed Location';
-  };
+  const popup = useRef(null);
 
   // Initialize map
   useEffect(() => {
-    if (map.current) return;
+    console.log('Map container ref:', mapContainer.current);
+    if (!mapContainer.current || map.current) return;
 
     try {
-      console.log('Initializing map...');
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/outdoors-v12',
-        center: [-98.5795, 39.8283], // Center of US
-        zoom: 3
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [-122.5199, 47.6262], // Bainbridge Island
+        zoom: 12
+      });
+
+      map.current.on('load', () => {
+        console.log('Map loaded');
+        setMapLoaded(true);
       });
 
       map.current.addControl(new mapboxgl.NavigationControl());
-      
-      // Initial bounds fitting if locations exist
-      if (locations?.length) {
-        const bounds = calculateBounds(locations);
-        map.current.on('load', () => {
-          fitMapToBounds(map.current, bounds);
-        });
-      }
-      
-      console.log('Map initialized successfully');
+
     } catch (error) {
       console.error('Error initializing map:', error);
     }
+
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
   }, []);
 
-  // Update markers when locations change
+  // Setup sources and layers when map is loaded
   useEffect(() => {
-    if (!map.current || !locations) return;
+    if (!map.current || !mapLoaded) {
+      console.log('Waiting for map to load...');
+      return;
+    }
 
-    console.log('Updating location markers...', locations);
+    console.log('Setting up map sources and layers');
+    try {
+      // Add source
+      map.current.addSource('locations', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []
+        },
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50
+      });
 
-    // Clear existing markers
-    markers.current.forEach(marker => marker.remove());
-    markers.current = [];
+      // Add layers
+      map.current.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: 'locations',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': [
+            'step',
+            ['get', 'point_count'],
+            '#51bbd6',
+            10,
+            '#f1f075',
+            30,
+            '#f28cb1'
+          ],
+          'circle-radius': [
+            'step',
+            ['get', 'point_count'],
+            20,
+            10,
+            30,
+            30,
+            40
+          ]
+        }
+      });
 
-    // Add markers for all locations
-    locations.forEach(location => {
-      const coords = getCoordinates(location);
-      if (!coords) return;
+      map.current.addLayer({
+        id: 'cluster-count',
+        type: 'symbol',
+        source: 'locations',
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': '{point_count_abbreviated}',
+          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+          'text-size': 12
+        }
+      });
 
-      // Create popup
-      const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
-        <div>
-          <h3 class="font-bold">${getName(location)}</h3>
-          <p class="text-sm">${location.shortDescription || location.content?.summary || ''}</p>
-          <button 
-            onclick="window.showLocationDetails('${location.id}')"
-            class="mt-2 text-sm text-blue-600 hover:underline"
-          >
-            View Details
-          </button>
-        </div>
-      `);
+      map.current.addLayer({
+        id: 'unclustered-point',
+        type: 'circle',
+        source: 'locations',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': '#2D60A3',
+          'circle-radius': 8,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#fff'
+        }
+      });
 
-      const marker = new mapboxgl.Marker()
-        .setLngLat([coords.lng, coords.lat])
-        .setPopup(popup)
-        .addTo(map.current);
+      // Add click handlers
+      map.current.on('click', 'clusters', (e) => {
+        const features = map.current.queryRenderedFeatures(e.point, {
+          layers: ['clusters']
+        });
+        map.current.easeTo({
+          center: features[0].geometry.coordinates,
+          zoom: map.current.getZoom() + 2
+        });
+      });
 
-      markers.current.push(marker);
-    });
+      map.current.on('click', 'unclustered-point', (e) => {
+        const coordinates = e.features[0].geometry.coordinates.slice();
+        const { id, title, description } = e.features[0].properties;
 
-    // Fit map to all locations
-    const bounds = calculateBounds(locations, currentLocation);
-    fitMapToBounds(map.current, bounds);
+        if (popup.current) popup.current.remove();
 
-    // Add global handler for the "View Details" button
+        popup.current = new mapboxgl.Popup()
+          .setLngLat(coordinates)
+          .setHTML(`
+            <div class="p-2">
+              <h3 class="font-bold text-lg mb-2">${title}</h3>
+              <p class="text-sm mb-4">${description}</p>
+              <button 
+                onclick="window.showLocationDetails('${id}')"
+                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+              >
+                Read Story
+              </button>
+            </div>
+          `)
+          .addTo(map.current);
+      });
+
+    } catch (error) {
+      console.error('Error setting up map layers:', error);
+    }
+  }, [mapLoaded]);
+
+  // Update locations when they change
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !locations.length) {
+      console.log('Skipping location update:', { hasMap: !!map.current, mapLoaded, locationCount: locations.length });
+      return;
+    }
+
+    console.log('Updating locations:', locations);
+    try {
+      const source = map.current.getSource('locations');
+      if (!source) {
+        console.error('Source not found');
+        return;
+      }
+
+      const features = locations.map(location => {
+        const coords = getCoordinates(location);
+        console.log('Processing location:', location.id, coords);
+        if (!coords) return null;
+
+        return {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [coords.lng, coords.lat]
+          },
+          properties: {
+            id: location.id,
+            title: typeof location.name === 'string' ? location.name : location.name?.current || '',
+            description: location.content?.summary || '',
+            hasStory: !!location.content?.stories?.length
+          }
+        };
+      }).filter(Boolean);
+
+      console.log('Setting features:', features);
+      source.setData({
+        type: 'FeatureCollection',
+        features
+      });
+
+      // Fit map to bounds
+      const bounds = calculateBounds(locations);
+      if (bounds) {
+        fitMapToBounds(map.current, bounds);
+      }
+    } catch (error) {
+      console.error('Error updating locations:', error);
+    }
+  }, [locations, mapLoaded]);
+
+  // Handle story details
+  useEffect(() => {
     window.showLocationDetails = (locationId) => {
       const location = locations.find(loc => loc.id === locationId);
       if (location) {
         setSelectedLocation(location);
+        if (popup.current) popup.current.remove();
       }
+    };
+
+    return () => {
+      delete window.showLocationDetails;
     };
   }, [locations]);
 
-  // Update current location marker and zoom
-  useEffect(() => {
-    if (!map.current || !currentLocation) return;
-
-    console.log('Setting current location:', currentLocation);
-
-    try {
-      // Remove existing current location marker
-      const currentMarker = markers.current.find(m => m._isCurrentLocation);
-      if (currentMarker) {
-        currentMarker.remove();
-        markers.current = markers.current.filter(m => !m._isCurrentLocation);
-      }
-
-      // Add new marker for current location
-      const marker = new mapboxgl.Marker({ color: '#FF0000' })
-        .setLngLat([currentLocation.lng, currentLocation.lat])
-        .addTo(map.current);
-      
-      // Tag this marker as current location
-      marker._isCurrentLocation = true;
-      markers.current.push(marker);
-
-      // Zoom to current location
-      zoomToLocation(map.current, currentLocation);
-    } catch (error) {
-      console.error('Error updating current location:', error);
-    }
-  }, [currentLocation]);
-
   return (
-    <>
+    <div style={{ 
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: '#e5e7eb'
+    }}>
       <div 
-        ref={mapContainer} 
-        className="absolute inset-0"
-        style={{ 
-          minHeight: '400px',
-          width: '100%',
-          height: '100%'
-        }} 
+        ref={mapContainer}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0
+        }}
       />
       {selectedLocation && (
         <LocationDetailModal 
@@ -160,7 +249,7 @@ const Map = ({ locations, currentLocation }) => {
           onClose={() => setSelectedLocation(null)}
         />
       )}
-    </>
+    </div>
   );
 };
 
